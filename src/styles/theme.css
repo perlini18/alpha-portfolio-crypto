@@ -1,0 +1,104 @@
+:root {
+  --brand-500: #4f55f1;
+  --brand-400: #7f84f6;
+  --ink-900: #191c1f;
+  --ink-inverse: #f8fafc;
+  --bg-50: #f6f8fc;
+  --card: #ffffff;
+  --border: #e6eaf2;
+  --muted: #667085;
+  --success: #16a34a;
+  --danger: #ef4444;
+  --card-shadow: 0 8px 30px rgba(15, 23, 42, 0.06);
+}
+
+html.dark {
+  --brand-500: #7f84f6;
+  --brand-400: #9aa0fa;
+  --ink-900: #e6ebf5;
+  --ink-inverse: #0f172a;
+  --bg-50: #0f1420;
+  --card: #161d2d;
+  --border: #253047;
+  --muted: #9aa4b2;
+  --success: #22c55e;
+  --danger: #f87171;
+  --card-shadow: 0 10px 30px rgba(2, 6, 23, 0.5);
+}
+
+.bg-app {
+  background: var(--bg-50);
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  box-shadow: var(--card-shadow);
+  padding: 1.25rem;
+}
+
+.pill-success {
+  background: rgba(22, 163, 74, 0.12);
+  color: var(--success);
+}
+
+.pill-danger {
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--danger);
+}
+
+.pill-neutral {
+  background: rgba(102, 112, 133, 0.12);
+  color: var(--muted);
+}
+
+.label-xs {
+  color: var(--muted);
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 600;
+}
+
+.btn-primary {
+  background: var(--brand-500);
+  color: var(--ink-inverse);
+  border-radius: 9999px;
+  padding: 0.5rem 0.875rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+
+.btn-primary:hover {
+  background: var(--brand-400);
+}
+
+.btn-secondary {
+  border: 1px solid var(--border);
+  border-radius: 9999px;
+  padding: 0.5rem 0.875rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--ink-900);
+  background: var(--card);
+}
+
+.btn-secondary:hover {
+  background: var(--bg-50);
+}
+
+.input-ui {
+  border: 1px solid var(--border);
+  border-radius: 9999px;
+  padding: 0.5rem 0.875rem;
+  font-size: 0.875rem;
+  color: var(--ink-900);
+  background: var(--card);
+  outline: none;
+}
+
+.input-ui:focus {
+  box-shadow: 0 0 0 3px rgba(79, 85, 241, 0.2);
+  border-color: var(--brand-400);
+}
