@@ -8,6 +8,7 @@ interface AssetOption {
   symbol: string;
   name: string;
   type: "crypto" | "stock";
+  asset_class?: "crypto" | "stock";
   provider_id?: string | null;
   coingecko_id?: string | null;
   coingecko_symbol?: string | null;

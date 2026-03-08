@@ -105,14 +105,15 @@ export function DashboardHoldings() {
   const dailyPctSign = dailyChangePct >= 0 ? "+" : "";
 
   return (
-    <section className="mx-auto max-w-6xl space-y-6">
+    <section className="mx-auto max-w-6xl space-y-8">
       <header>
-        <h1 className="text-3xl font-bold tracking-tight text-[color:var(--ink-900)]">{t("dashboard.title", lang)}</h1>
+        <h1 className="text-4xl font-bold tracking-tight text-[color:var(--ink-900)] md:text-5xl">{t("dashboard.title", lang)}</h1>
+        <p className="mt-2 text-sm text-[color:var(--muted)]">{t("dashboard.cryptoOverview", lang)}</p>
       </header>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
         <article className="card">
-          <p className="label-xs">{t("dashboard.totalWorth", lang)}</p>
+          <p className="label-xs">{t("dashboard.totalWorthUsd", lang)}</p>
           <p className="mt-3 text-4xl font-extrabold leading-none text-[color:var(--ink-900)] md:text-5xl">{formatMoney(totalWorth)}</p>
           <p className={`mt-3 text-sm font-semibold ${dailyToneClass}`}>
             {dailySign}
@@ -121,14 +122,16 @@ export function DashboardHoldings() {
           </p>
         </article>
         <StatCard
-          label={t("dashboard.totalPnl", lang)}
+          label={t("dashboard.totalPnlUsd", lang)}
           value={formatMoney(totalPnL)}
           tone={totalPnL >= 0 ? "success" : "danger"}
           subvalue=""
         />
       </div>
 
-      <p className="label-xs">Sponspored</p>
+      <p className="text-xs text-[color:var(--muted)]">{t("dashboard.valuesInUsd", lang)}</p>
+
+      <p className="label-xs">Sponsored</p>
       <AdsCarousel page="dashboard" />
 
       <div className="card space-y-4">

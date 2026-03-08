@@ -10,6 +10,7 @@ export interface DashboardHoldingRow {
   symbol: string;
   name: string;
   type: "crypto" | "stock";
+  asset_class?: "crypto" | "stock";
   owned: number;
   market_value: number;
   pnl: number;
@@ -44,7 +45,7 @@ export function HoldingsTable({ rows }: HoldingsTableProps) {
         return (
           <article
             key={`${row.symbol}:${row.account || "global"}`}
-            className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition-colors hover:bg-slate-50"
+            className="rounded-2xl border border-[color:var(--border)] bg-[color:var(--card)] p-4 shadow-sm transition-colors hover:bg-[color:var(--surface-2)]"
           >
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <Link href={`/assets/${row.symbol}`} className="inline-flex items-center gap-3">

@@ -1,4 +1,5 @@
 import { pool } from "@/lib/db";
+import { isUuid } from "@/lib/requireUser";
 
 interface EntitlementQueryResult {
   adsFree: boolean;
@@ -40,6 +41,7 @@ export async function upsertAdsFreeEntitlement(params: {
   providerSubscriptionId?: string | null;
   currentPeriodEnd?: string | Date | null;
 }) {
+  const userId = params.ownerType === "user" && isUuid(params.ownerId) ? params.ownerId : null;
   const endValue =
     params.currentPeriodEnd instanceof Date
       ? params.currentPeriodEnd.toISOString()
@@ -47,11 +49,12 @@ export async function upsertAdsFreeEntitlement(params: {
 
   await pool.query(
     `INSERT INTO entitlements
-      (owner_type, owner_id, key, status, provider, provider_customer_id, provider_subscription_id, current_period_end, created_at, updated_at)
+      (owner_type, owner_id, user_id, key, status, provider, provider_customer_id, provider_subscription_id, current_period_end, created_at, updated_at)
      VALUES
-      ($1, $2, 'ads_free', $3, $4, $5, $6, $7, NOW(), NOW())
+      ($1, $2, $3, 'ads_free', $4, $5, $6, $7, $8, NOW(), NOW())
      ON CONFLICT (owner_type, owner_id, key)
      DO UPDATE SET
+      user_id = COALESCE(EXCLUDED.user_id, entitlements.user_id),
       status = EXCLUDED.status,
       provider = EXCLUDED.provider,
       provider_customer_id = COALESCE(EXCLUDED.provider_customer_id, entitlements.provider_customer_id),
@@ -61,6 +64,7 @@ export async function upsertAdsFreeEntitlement(params: {
     [
       params.ownerType,
       params.ownerId,
+      userId,
       params.status,
       params.provider,
       params.providerCustomerId || null,

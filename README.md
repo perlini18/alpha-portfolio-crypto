@@ -61,6 +61,63 @@ npm run dev
 
 Abrir: `http://localhost:3000`
 
+## Auth setup (Google)
+
+Este MVP usa Auth.js / NextAuth v5 con sesiones JWT (sin adapter DB).
+
+Variables en `.env.local`:
+
+```env
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=<<SECRET_LARGO_RANDOM>>
+GOOGLE_CLIENT_ID=<<GOOGLE_CLIENT_ID>>
+GOOGLE_CLIENT_SECRET=<<GOOGLE_CLIENT_SECRET>>
+```
+
+Google Cloud Console:
+
+1. OAuth Consent Screen:
+   Configura app name + scopes básicos (`openid`, `email`, `profile`).
+2. Credentials -> Create credentials -> OAuth Client ID (Web application).
+3. Authorized redirect URIs:
+   - Local: `http://localhost:3000/api/auth/callback/google`
+   - Producción: `https://TU_DOMINIO/api/auth/callback/google`
+
+Flujo:
+
+- `/login` -> `Continue with Google`
+- callback -> `/dashboard`
+- header muestra usuario y botón `Sign out`.
+
+## Security hardening
+
+Variables recomendadas en `.env.local`:
+
+```env
+ENCRYPTION_KEY=<<LONG_RANDOM_SECRET>>
+NEXTAUTH_SECRET=<<LONG_RANDOM_SECRET>>
+```
+
+Qué se cifra:
+
+- `accounts.notes`
+- `transactions.notes`
+
+Qué no se cifra (para cálculos/joins):
+
+- ids (`user_id`, `account_id`)
+- `asset_symbol`
+- `quantity`, `price`, `fee_amount`, `fee_currency`
+- `datetime`, `kind`, `base_currency`, `is_default`
+
+Notas importantes:
+
+- El cifrado usa AES-256-GCM y formato `iv:tag:ciphertext` (base64).
+- La app es compatible con registros antiguos en texto plano.
+- Cambiar `ENCRYPTION_KEY` puede impedir descifrar datos históricos ya cifrados.
+- Cookies de sesión usan `httpOnly` y `secure` en producción por configuración de Auth.js.
+- Se aplican headers de seguridad (CSP básica, `X-Frame-Options`, `nosniff`, `Referrer-Policy`, `Permissions-Policy`, HSTS en producción).
+
 ### Modo Pro (sin anuncios)
 
 Los anuncios se desactivan si `NEXT_PUBLIC_PRO_MODE=true`.

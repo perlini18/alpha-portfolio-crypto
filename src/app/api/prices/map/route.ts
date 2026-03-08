@@ -2,9 +2,32 @@ import { NextResponse } from "next/server";
 import { pool } from "@/lib/db";
 
 export const dynamic = "force-dynamic";
+const MAP_TTL_MS = 45_000;
 
-export async function GET() {
+let cache: {
+  expiresAt: number;
+  prices: Record<string, number>;
+  updatedAt: string;
+} | null = null;
+
+export async function GET(request: Request) {
   try {
+    const force = new URL(request.url).searchParams.get("force") === "1";
+    const now = Date.now();
+    if (!force && cache && cache.expiresAt > now) {
+      return NextResponse.json(
+        {
+          prices: cache.prices,
+          updatedAt: cache.updatedAt
+        },
+        {
+          headers: {
+            "Cache-Control": "no-store"
+          }
+        }
+      );
+    }
+
     const { rows } = await pool.query<{ symbol: string; last_price: number | null }>(
       `SELECT symbol, last_price
        FROM assets
@@ -21,10 +44,17 @@ export async function GET() {
       }
     }
 
+    const updatedAt = new Date().toISOString();
+    cache = {
+      prices,
+      updatedAt,
+      expiresAt: now + MAP_TTL_MS
+    };
+
     return NextResponse.json(
       {
         prices,
-        updatedAt: new Date().toISOString()
+        updatedAt
       },
       {
         headers: {
@@ -33,8 +63,9 @@ export async function GET() {
       }
     );
   } catch (error) {
+    console.error("[api/prices/map][GET] error", error);
     return NextResponse.json(
-      { error: "Failed to load prices map", details: String(error) },
+      { error: "Failed to load prices map" },
       { status: 500, headers: { "Cache-Control": "no-store" } }
     );
   }

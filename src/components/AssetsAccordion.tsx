@@ -16,6 +16,7 @@ interface AssetWithStats {
   symbol: string;
   name: string;
   type: "crypto" | "stock";
+  asset_class?: "crypto" | "stock";
   account_id: number | null;
   account_name: string | null;
   last_price: number;
@@ -266,6 +267,7 @@ function PortfolioValueChart({ points, lang }: { points: number[]; lang: "es" | 
 export function AssetsAccordion() {
   const { lang } = useLanguage();
   const { loadOnce, refresh: refreshPricesStore } = usePrices();
+  const [activeClass, setActiveClass] = useState<"crypto" | "stock">("crypto");
   const [assets, setAssets] = useState<AssetWithStats[]>([]);
   const [loadingAssets, setLoadingAssets] = useState(true);
   const [refreshingPrices, setRefreshingPrices] = useState(false);
@@ -385,13 +387,22 @@ export function AssetsAccordion() {
     }
   }
 
+  const classFilteredAssets = useMemo(
+    () =>
+      assets.filter((asset) => {
+        const assetClass = asset.asset_class || asset.type || "crypto";
+        return assetClass === activeClass;
+      }),
+    [activeClass, assets]
+  );
+
   const visibleAssets = useMemo(() => {
     const query = search.trim().toLowerCase();
     const filtered = query
-      ? assets.filter((asset) => {
+      ? classFilteredAssets.filter((asset) => {
           return asset.symbol.toLowerCase().includes(query) || asset.name.toLowerCase().includes(query);
         })
-      : assets;
+      : classFilteredAssets;
     const holdingsFiltered = showZeroHoldings
       ? filtered
       : filtered.filter((asset) => asset.ownedQty !== 0 || asset.txCount > 0);
@@ -410,9 +421,12 @@ export function AssetsAccordion() {
 
     sorted.sort((a, b) => a.symbol.localeCompare(b.symbol));
     return sorted;
-  }, [assets, search, showZeroHoldings, sortBy]);
+  }, [classFilteredAssets, search, showZeroHoldings, sortBy]);
 
-  const nonZeroHoldings = useMemo(() => assets.filter((asset) => asset.ownedQty !== 0), [assets]);
+  const nonZeroHoldings = useMemo(
+    () => classFilteredAssets.filter((asset) => asset.ownedQty !== 0),
+    [classFilteredAssets]
+  );
   const totalValue = useMemo(
     () => nonZeroHoldings.reduce((sum, asset) => sum + Number(asset.marketValue || 0), 0),
     [nonZeroHoldings]
@@ -500,11 +514,35 @@ export function AssetsAccordion() {
   }
 
   return (
-    <section className="mx-auto max-w-6xl space-y-5 md:space-y-6">
+    <section className="mx-auto max-w-6xl space-y-6 md:space-y-8">
       <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
         <div>
           <h1 className="text-4xl font-bold tracking-tight text-[color:var(--ink-900)]">{t("portfolio.title", lang)}</h1>
           <p className="mt-1 text-sm text-[color:var(--muted)]">{t("portfolio.subtitle", lang)}</p>
+          <div className="mt-4 inline-flex items-center gap-2 rounded-full border border-[color:var(--border)] bg-[color:var(--card)] p-1">
+            <button
+              type="button"
+              onClick={() => setActiveClass("crypto")}
+              className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+                activeClass === "crypto"
+                  ? "bg-[color:var(--brand-500)] text-white"
+                  : "text-[color:var(--muted)] hover:bg-[color:var(--bg-50)]"
+              }`}
+            >
+              {t("portfolio.tabCrypto", lang)}
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveClass("stock")}
+              className={`rounded-full px-3 py-1.5 text-xs font-semibold ${
+                activeClass === "stock"
+                  ? "bg-[color:var(--surface-2)] text-[color:var(--ink-900)]"
+                  : "text-[color:var(--muted)] hover:bg-[color:var(--bg-50)]"
+              }`}
+            >
+              {t("portfolio.tabStocks", lang)} <span className="opacity-80">• {t("portfolio.comingSoon", lang)}</span>
+            </button>
+          </div>
         </div>
         <button onClick={() => void refreshPrices()} disabled={refreshingPrices || loadingAssets} className="btn-secondary w-fit disabled:opacity-60">
           {refreshingPrices ? t("portfolio.refreshing", lang) : t("portfolio.refresh", lang)}
@@ -512,6 +550,26 @@ export function AssetsAccordion() {
       </div>
 
       <AdsCarousel page="portfolio" />
+
+      {activeClass === "stock" ? (
+        <div className="card py-12 text-center">
+          <div className="mx-auto mb-3 inline-flex items-center rounded-full border border-[color:var(--border)] bg-[color:var(--bg-50)] px-3 py-1 text-xs font-semibold text-[color:var(--muted)]">
+            {t("portfolio.comingSoon", lang)}
+          </div>
+          <h2 className="text-2xl font-bold tracking-tight text-[color:var(--ink-900)]">
+            {t("portfolio.stocksComingSoonTitle", lang)}
+          </h2>
+          <p className="mx-auto mt-2 max-w-xl text-sm text-[color:var(--muted)]">
+            {t("portfolio.stocksComingSoonDescription", lang)}
+          </p>
+          <button type="button" disabled className="btn-secondary mt-5 cursor-default opacity-70">
+            {t("portfolio.stayTuned", lang)}
+          </button>
+        </div>
+      ) : null}
+
+      {activeClass === "stock" ? null : (
+        <>
 
       <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
         <StatCard label={t("portfolio.totalValue", lang)} value={formatMoney(totalValue)} />
@@ -581,14 +639,14 @@ export function AssetsAccordion() {
         >
           <span
             className={`relative inline-flex h-6 w-11 items-center rounded-full transition ${
-              showZeroHoldings ? "bg-[color:var(--brand-500)]" : "bg-slate-300"
+              showZeroHoldings ? "bg-[color:var(--brand-500)]" : "bg-[color:var(--border)]"
             }`}
           >
-            <span
-              className={`inline-block h-5 w-5 transform rounded-full bg-white transition ${
-                showZeroHoldings ? "translate-x-5" : "translate-x-1"
-              }`}
-            />
+                <span
+                  className={`inline-block h-5 w-5 transform rounded-full bg-[color:var(--card)] transition ${
+                    showZeroHoldings ? "translate-x-5" : "translate-x-1"
+                  }`}
+                />
           </span>
           {t("portfolio.showZero", lang)}
         </button>
@@ -637,7 +695,7 @@ export function AssetsAccordion() {
         <div className="hidden overflow-x-auto md:block">
           <table className="min-w-[1080px] w-full border-collapse">
             <thead>
-              <tr className="border-b border-[color:var(--border)] bg-[#F6F8FC] text-left text-xs uppercase tracking-wider text-[color:var(--muted)]">
+              <tr className="border-b border-[color:var(--border)] bg-[color:var(--surface-2)] text-left text-xs uppercase tracking-[0.12em] text-[color:var(--muted)]">
                 <th className="px-4 py-3">{t("transactions.asset", lang)}</th>
                 <th className="px-4 py-3">{t("transactions.type", lang)}</th>
                 <th className="px-4 py-3">{t("transactions.price", lang)}</th>
@@ -669,7 +727,7 @@ export function AssetsAccordion() {
 
                 return (
                   <Fragment key={asset.key}>
-                    <tr className="h-16 border-b border-[color:var(--border)] align-top hover:bg-[#F6F8FC]">
+                    <tr className="h-16 border-b border-[color:var(--border)] align-top hover:bg-[color:var(--surface-2)]">
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
                           <AssetIcon symbol={asset.symbol} />
@@ -683,11 +741,13 @@ export function AssetsAccordion() {
                           </div>
                         </div>
                       </td>
-                      <td className="px-4 py-3 text-sm capitalize text-[color:var(--ink-900)]">{asset.type}</td>
+                      <td className="px-4 py-3 text-sm text-[color:var(--ink-900)]">
+                        {(asset.asset_class || asset.type) === "stock" ? t("nav.stocks", lang) : t("nav.crypto", lang)}
+                      </td>
                       <td className="px-4 py-3">
                         <div className="text-sm font-medium text-[color:var(--ink-900)]">{formatMoney(asset.last_price)}</div>
                         {asset.noLivePrice || missingSymbols.includes(asset.symbol.toUpperCase()) ? (
-                          <span className="mt-1 inline-flex rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-medium text-slate-600">
+                          <span className="mt-1 inline-flex rounded-full bg-[color:var(--surface-2)] px-2 py-0.5 text-[11px] font-medium text-[color:var(--muted)]">
                             {t("portfolio.noLivePrice", lang)}
                           </span>
                         ) : null}
@@ -707,7 +767,7 @@ export function AssetsAccordion() {
                         <button
                           type="button"
                           onClick={() => onToggleExpand(asset.key, asset.symbol)}
-                          className="inline-flex items-center rounded-full p-2 text-[color:var(--muted)] hover:border hover:border-[color:var(--border)] hover:bg-white"
+                          className="inline-flex items-center rounded-full p-2 text-[color:var(--muted)] hover:border hover:border-[color:var(--border)] hover:bg-[color:var(--card)]"
                           aria-label={t("portfolio.toggleAssetTx", lang).replace("{symbol}", asset.symbol)}
                         >
                           <Chevron open={open} />
@@ -716,17 +776,17 @@ export function AssetsAccordion() {
                     </tr>
 
                     {open ? (
-                      <tr className="border-b border-[color:var(--border)] bg-slate-50/40">
+                      <tr className="border-b border-[color:var(--border)] bg-[color:var(--surface-2)]/55">
                         <td className="table-cell" colSpan={9}>
                           {details?.loading ? (
                             <p className="text-sm text-slate-500">{t("portfolio.loadingTransactions", lang)}</p>
                           ) : details?.error ? (
                             <p className="text-sm text-rose-600">{details.error}</p>
                           ) : (
-                            <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+                            <div className="overflow-x-auto rounded-lg border border-[color:var(--border)] bg-[color:var(--card)]">
                               <table className="min-w-full border-collapse">
                                 <thead>
-                                  <tr className="border-b border-slate-200 text-left text-xs uppercase tracking-wider text-slate-500">
+                                  <tr className="border-b border-[color:var(--border)] text-left text-xs uppercase tracking-[0.12em] text-[color:var(--muted)]">
                                     <th className="table-cell">{t("transactions.datetime", lang)}</th>
                                     <th className="table-cell">{t("transactions.type", lang)}</th>
                                     <th className="table-cell">{t("accounts.kindExchange", lang)}</th>
@@ -741,7 +801,7 @@ export function AssetsAccordion() {
                                 </thead>
                                 <tbody>
                                   {scopedTransactions.map((tx) => (
-                                    <tr key={tx.id} className="border-b border-slate-100">
+                                    <tr key={tx.id} className="border-b border-[color:var(--border)]/70">
                                       <td className="table-cell">{formatTxDateTimeUtc(tx.datetime)}</td>
                                       <td className="table-cell">{tx.type}</td>
                                       <td className="table-cell text-slate-500">{tx.account_name || "—"}</td>
@@ -789,6 +849,8 @@ export function AssetsAccordion() {
           ) : null}
         </div>
       </div>
+        </>
+      )}
     </section>
   );
 }

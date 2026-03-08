@@ -3,6 +3,8 @@ import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { pool } from "@/lib/db";
+import { checkRateLimit } from "@/lib/rate-limit";
+import { getClientIp } from "@/lib/security";
 
 export const dynamic = "force-dynamic";
 
@@ -22,8 +24,18 @@ function getOrCreateAnonymousSessionId() {
 }
 
 export async function POST(request: Request) {
+  const ip = getClientIp(request);
   try {
     const parsed = eventSchema.parse(await request.json());
+    const rl = checkRateLimit({
+      key: `ads:event:${ip}:${parsed.eventType}:${parsed.page}:${parsed.adId}`,
+      limit: 30,
+      windowMs: 60_000
+    });
+    if (!rl.allowed) {
+      return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+    }
+
     const session = getOrCreateAnonymousSessionId();
 
     let deduped = false;
@@ -67,6 +79,7 @@ export async function POST(request: Request) {
         path: "/",
         httpOnly: true,
         sameSite: "lax",
+        secure: process.env.NODE_ENV === "production",
         maxAge: 60 * 60 * 24 * 180
       });
     }
@@ -75,6 +88,7 @@ export async function POST(request: Request) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ error: error.issues[0]?.message || "Invalid payload" }, { status: 400 });
     }
-    return NextResponse.json({ error: "Failed to save ad event", details: String(error) }, { status: 500 });
+    console.error("[api/ads/event][POST] error", error);
+    return NextResponse.json({ error: "Failed to save ad event" }, { status: 500 });
   }
 }

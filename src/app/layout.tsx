@@ -5,6 +5,7 @@ import { Nav } from "@/components/Nav";
 import { LanguageProvider } from "@/components/LanguageProvider";
 import { MobileBottomNav } from "@/components/MobileBottomNav";
 import { PricesProvider } from "@/lib/prices-store";
+import { AuthProvider } from "@/components/AuthProvider";
 
 export const metadata: Metadata = {
   title: "crypto-tracker",
@@ -38,13 +39,15 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <script dangerouslySetInnerHTML={{ __html: themeScript }} />
       </head>
       <body className="bg-app text-[color:var(--ink-900)]">
-        <LanguageProvider>
-          <PricesProvider>
-            <Nav />
-            <main className="mx-auto max-w-6xl px-4 py-6 pb-24 md:px-6 md:py-8 md:pb-8">{children}</main>
-            <MobileBottomNav />
-          </PricesProvider>
-        </LanguageProvider>
+        <AuthProvider>
+          <LanguageProvider>
+            <PricesProvider>
+              <Nav />
+              <main className="mx-auto max-w-6xl px-4 py-6 pb-24 md:px-6 md:py-8 md:pb-8">{children}</main>
+              <MobileBottomNav />
+            </PricesProvider>
+          </LanguageProvider>
+        </AuthProvider>
       </body>
     </html>
   );

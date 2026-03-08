@@ -1,4 +1,5 @@
 import { pool } from "@/lib/db";
+import { normalizeAssetClass } from "@/lib/asset-class";
 import { SYMBOL_TO_COINGECKO_ID } from "@/lib/coingecko";
 
 export const PRICE_TTL_MS = 5 * 60 * 1000;
@@ -7,6 +8,7 @@ const UI_PRICE_STALE_MS = 30 * 60 * 1000;
 let hasLastPriceUpdatedAtCache: boolean | null = null;
 let hasCoingeckoIdCache: boolean | null = null;
 let hasProviderIdCache: boolean | null = null;
+let hasAssetClassCache: boolean | null = null;
 
 export function hasLiveCryptoMapping(symbol: string) {
   return Boolean(SYMBOL_TO_COINGECKO_ID[symbol.toUpperCase()]);
@@ -104,6 +106,24 @@ async function hasProviderIdColumn() {
   return hasProviderIdCache;
 }
 
+async function hasAssetClassColumn() {
+  if (hasAssetClassCache !== null) {
+    return hasAssetClassCache;
+  }
+
+  const { rows } = await pool.query(
+    `SELECT 1
+     FROM information_schema.columns
+     WHERE table_schema = 'public'
+       AND table_name = 'assets'
+       AND column_name = 'asset_class'
+     LIMIT 1`
+  );
+
+  hasAssetClassCache = Boolean(rows[0]);
+  return hasAssetClassCache;
+}
+
 async function fetchCryptoPricesByIdPairs(pairs: Array<{ symbol: string; coingecko_id: string }>) {
   const uniquePairs: Array<{ symbol: string; coingecko_id: string }> = [];
   const seen = new Set<string>();
@@ -165,6 +185,7 @@ interface RefreshFailure {
 interface AssetRow {
   symbol: string;
   type: string;
+  asset_class?: string | null;
   last_price: number | null;
   updated_at: string | null;
   last_price_updated_at?: string | null;
@@ -183,8 +204,12 @@ export async function refreshPricesIfStale(options: boolean | RefreshPricesOptio
   const hasLastPriceUpdatedAt = await hasLastPriceUpdatedAtColumn();
   const hasCoingeckoId = await hasCoingeckoIdColumn();
   const hasProviderId = await hasProviderIdColumn();
+  const hasAssetClass = await hasAssetClassColumn();
 
   const selectCols = ["symbol", "type", "last_price", "updated_at"];
+  if (hasAssetClass) {
+    selectCols.push("asset_class");
+  }
   if (hasLastPriceUpdatedAt) {
     selectCols.push("last_price_updated_at");
   }
@@ -198,7 +223,7 @@ export async function refreshPricesIfStale(options: boolean | RefreshPricesOptio
   const params: unknown[] = [];
 
   if (onlyCrypto) {
-    where.push("type = 'crypto'");
+    where.push(hasAssetClass ? "asset_class = 'crypto'" : "type = 'crypto'");
   }
   if (requestedSymbols.length) {
     params.push(requestedSymbols);
@@ -214,6 +239,11 @@ export async function refreshPricesIfStale(options: boolean | RefreshPricesOptio
   const staleRows: AssetRow[] = [];
 
   for (const row of rows) {
+    const assetClass = normalizeAssetClass(hasAssetClass ? row.asset_class : row.type);
+    if (onlyCrypto && assetClass !== "crypto") {
+      continue;
+    }
+
     const lastUpdatedRaw = hasLastPriceUpdatedAt ? (row.last_price_updated_at ?? row.updated_at) : row.updated_at;
     const lastUpdated = lastUpdatedRaw ? new Date(lastUpdatedRaw) : null;
 

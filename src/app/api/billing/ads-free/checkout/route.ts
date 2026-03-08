@@ -51,10 +51,10 @@ export async function POST(request: Request) {
     applyOwnerCookie(response, owner);
     return response;
   } catch (error) {
+    console.error("[api/billing/ads-free/checkout][POST] error", error);
     const response = NextResponse.json(
       {
-        error: "Failed to create checkout session",
-        details: String(error)
+        error: "Failed to create checkout session"
       },
       { status: 500 }
     );

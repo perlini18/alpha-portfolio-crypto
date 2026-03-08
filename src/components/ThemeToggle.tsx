@@ -27,14 +27,13 @@ export function ThemeToggle() {
             onClick={() => setMode(option.mode)}
             aria-pressed={active}
             aria-label={label}
-            className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition focus:outline-none focus:ring-2 focus:ring-[color:var(--brand-400)] ${
-              active
+            className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-semibold transition focus:outline-none focus:ring-2 focus:ring-[color:var(--brand-400)] ${active
                 ? "bg-[color:var(--brand-500)] text-[color:var(--ink-inverse)]"
                 : "text-[color:var(--muted)] hover:bg-[color:var(--bg-50)]"
-            }`}
+              }`}
           >
             <span aria-hidden>{option.icon}</span>
-            <span className="hidden sm:inline">{label}</span>
+            {option.mode !== "system" ? <span className="hidden sm:inline">{label}</span> : null}
           </button>
         );
       })}

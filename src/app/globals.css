@@ -8,10 +8,51 @@ body {
   min-height: 100vh;
 }
 
+html.dark body {
+  background:
+    radial-gradient(1200px 700px at 8% -10%, rgba(111, 120, 255, 0.12), transparent 62%),
+    radial-gradient(1000px 620px at 100% 0%, rgba(43, 214, 123, 0.05), transparent 55%),
+    linear-gradient(180deg, #090c13 0%, #080b12 100%);
+}
+
 .table-cell {
   @apply px-4 py-3 text-sm;
 }
 
 .badge {
   @apply rounded-full px-2 py-1 text-xs font-semibold;
+}
+
+html.dark .bg-white {
+  background-color: var(--card) !important;
+}
+
+html.dark .bg-slate-50,
+html.dark .bg-slate-50\/40,
+html.dark .hover\:bg-slate-50:hover {
+  background-color: var(--surface-2) !important;
+}
+
+html.dark .border-slate-200 {
+  border-color: var(--border) !important;
+}
+
+html.dark .border-slate-100 {
+  border-color: rgba(35, 44, 61, 0.78) !important;
+}
+
+html.dark .text-slate-900 {
+  color: var(--ink-900) !important;
+}
+
+html.dark .text-slate-700,
+html.dark .text-slate-600,
+html.dark .text-slate-500 {
+  color: var(--muted) !important;
+}
+
+html.dark .shadow-sm,
+html.dark .shadow-lg,
+html.dark .shadow-xl {
+  box-shadow: var(--card-shadow) !important;
 }

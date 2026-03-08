@@ -1,22 +1,33 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { pool } from "@/lib/db";
+import { normalizeAssetClass } from "@/lib/asset-class";
 import { createAssetSchema, patchAssetPriceSchema } from "@/lib/schemas";
+import { requireUserId, UnauthorizedError } from "@/lib/requireUser";
 
 export const dynamic = "force-dynamic";
 
 export async function GET(request: Request) {
+  try {
+    await requireUserId();
+  } catch (error) {
+    if (error instanceof UnauthorizedError) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const { searchParams } = new URL(request.url);
   const query = searchParams.get("query")?.trim();
 
   const hasQuery = Boolean(query);
   const values = hasQuery ? [`%${query}%`] : [];
   const queryWithProviderColumns = hasQuery
-    ? `SELECT symbol, name, type, provider_id, coingecko_id, coingecko_symbol, provider, last_price, updated_at, last_price_updated_at
+    ? `SELECT symbol, name, type, COALESCE(asset_class, type, 'crypto') AS asset_class, provider_id, coingecko_id, coingecko_symbol, provider, last_price, updated_at, last_price_updated_at
        FROM assets
        WHERE symbol ILIKE $1 OR name ILIKE $1
        ORDER BY symbol ASC`
-    : `SELECT symbol, name, type, provider_id, coingecko_id, coingecko_symbol, provider, last_price, updated_at, last_price_updated_at
+    : `SELECT symbol, name, type, COALESCE(asset_class, type, 'crypto') AS asset_class, provider_id, coingecko_id, coingecko_symbol, provider, last_price, updated_at, last_price_updated_at
        FROM assets
        ORDER BY symbol ASC`;
   const queryFallback = hasQuery
@@ -72,16 +83,37 @@ export async function GET(request: Request) {
     }
   }
 
-  return NextResponse.json(rows);
+  return NextResponse.json(
+    rows.map((row) => {
+      const record = row as Record<string, unknown>;
+      const assetClass = normalizeAssetClass(
+        typeof record.asset_class === "string" ? record.asset_class : typeof record.type === "string" ? record.type : null
+      );
+      return {
+        ...record,
+        asset_class: assetClass
+      };
+    })
+  );
 }
 
 export async function POST(request: Request) {
+  try {
+    await requireUserId();
+  } catch (error) {
+    if (error instanceof UnauthorizedError) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const payload = await request.json();
     const baseSchema = z.object({
       symbol: z.string(),
       name: z.string().optional().nullable(),
       type: z.enum(["crypto", "stock"]),
+      asset_class: z.enum(["crypto", "stock"]).optional().nullable(),
       provider_id: z.string().trim().optional().nullable(),
       coingecko_id: z.string().trim().optional().nullable(),
       coingecko_symbol: z.string().trim().optional().nullable(),
@@ -97,6 +129,7 @@ export async function POST(request: Request) {
       type: raw.type,
       last_price: 0
     });
+    const assetClass = normalizeAssetClass(raw.asset_class || parsed.type);
 
     const coingeckoId = raw.coingecko_id || raw.provider_id || null;
     const coingeckoSymbol = raw.coingecko_symbol || (coingeckoId ? symbol.toLowerCase() : null);
@@ -105,17 +138,18 @@ export async function POST(request: Request) {
     let insertResult;
     try {
       insertResult = await pool.query(
-        `INSERT INTO assets (symbol, name, type, provider_id, coingecko_id, coingecko_symbol, provider, last_price)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, 0)
+        `INSERT INTO assets (symbol, name, type, asset_class, provider_id, coingecko_id, coingecko_symbol, provider, last_price)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 0)
          ON CONFLICT (symbol) DO UPDATE
          SET name = EXCLUDED.name,
              type = EXCLUDED.type,
+             asset_class = EXCLUDED.asset_class,
              provider_id = COALESCE(EXCLUDED.provider_id, assets.provider_id),
              coingecko_id = COALESCE(EXCLUDED.coingecko_id, assets.coingecko_id),
              coingecko_symbol = COALESCE(EXCLUDED.coingecko_symbol, assets.coingecko_symbol),
              provider = COALESCE(EXCLUDED.provider, assets.provider)
-         RETURNING symbol, name, type, provider_id, coingecko_id, coingecko_symbol, provider`,
-        [parsed.symbol, parsed.name, parsed.type, providerId, coingeckoId, coingeckoSymbol, provider]
+         RETURNING symbol, name, type, asset_class, provider_id, coingecko_id, coingecko_symbol, provider`,
+        [parsed.symbol, parsed.name, parsed.type, assetClass, providerId, coingeckoId, coingeckoSymbol, provider]
       );
     } catch (error) {
       if ((error as { code?: string }).code !== "42703") {
@@ -149,7 +183,16 @@ export async function POST(request: Request) {
     }
 
     if (insertResult.rows[0]) {
-      return NextResponse.json(insertResult.rows[0], { status: 200 });
+      const row = insertResult.rows[0] as Record<string, unknown>;
+      return NextResponse.json(
+        {
+          ...row,
+          asset_class: normalizeAssetClass(
+            typeof row.asset_class === "string" ? row.asset_class : typeof row.type === "string" ? row.type : null
+          )
+        },
+        { status: 200 }
+      );
     }
     return NextResponse.json({ error: "Asset could not be created" }, { status: 400 });
   } catch (error) {
@@ -167,6 +210,15 @@ export async function POST(request: Request) {
 
 export async function PATCH(request: Request) {
   try {
+    await requireUserId();
+  } catch (error) {
+    if (error instanceof UnauthorizedError) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  try {
     const payload = await request.json();
     const parsed = patchAssetPriceSchema.parse(payload);
 
@@ -176,7 +228,7 @@ export async function PATCH(request: Request) {
         `UPDATE assets
          SET last_price = $2, updated_at = NOW(), last_price_updated_at = NOW()
          WHERE symbol = $1
-         RETURNING symbol, name, type, last_price, updated_at`,
+         RETURNING symbol, name, type, COALESCE(asset_class, type, 'crypto') AS asset_class, last_price, updated_at`,
         [parsed.symbol, parsed.last_price]
       );
       rows = result.rows;
@@ -199,10 +251,17 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: "Asset not found" }, { status: 404 });
     }
 
-    return NextResponse.json(rows[0]);
+    const row = rows[0] as Record<string, unknown>;
+    return NextResponse.json({
+      ...row,
+      asset_class: normalizeAssetClass(
+        typeof row.asset_class === "string" ? row.asset_class : typeof row.type === "string" ? row.type : null
+      )
+    });
   } catch (error) {
+    console.error("[api/assets][PATCH] invalid payload", error);
     return NextResponse.json(
-      { error: "Invalid patch payload", details: String(error) },
+      { error: "Invalid patch payload" },
       { status: 400 }
     );
   }

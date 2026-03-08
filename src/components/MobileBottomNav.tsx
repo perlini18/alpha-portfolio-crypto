@@ -34,7 +34,7 @@ export function MobileBottomNav() {
   const { lang } = useLanguage();
 
   const tabs = [
-    { href: "/", label: t("nav.dashboard", lang), icon: "M3 10.5 12 3l9 7.5V21H3z" },
+    { href: "/dashboard", label: t("nav.dashboard", lang), icon: "M3 10.5 12 3l9 7.5V21H3z" },
     { href: "/portfolio", label: t("nav.portfolio", lang), icon: "M4 6h16M4 12h16M4 18h10" },
     { href: "/accounts", label: t("nav.accounts", lang), icon: "M4 20h16M7 20V8h10v12M9 8V4h6v4" },
     { href: "/transactions", label: t("nav.transactions", lang), icon: "M5 5h14v14H5zM9 9h6M9 13h6" }

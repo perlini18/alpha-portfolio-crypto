@@ -1,4 +1,6 @@
 import { notFound } from "next/navigation";
+import { auth } from "@/auth";
+import { decryptText } from "@/lib/crypto";
 import { pool } from "@/lib/db";
 import { calculateAssetPortfolio } from "@/lib/portfolio";
 import { formatMoney, formatNumber } from "@/lib/format";
@@ -10,6 +12,12 @@ interface Props {
 }
 
 export default async function AssetDetailPage({ params }: Props) {
+  const session = await auth();
+  const userId = session?.user?.id;
+  if (!userId) {
+    notFound();
+  }
+
   const symbol = params.symbol.toUpperCase();
 
   const assetRes = await pool.query(
@@ -22,11 +30,12 @@ export default async function AssetDetailPage({ params }: Props) {
   }
 
   const txRes = await pool.query(
-    `SELECT id, datetime, type, account_id, asset_symbol, quantity, price, fee_amount, fee_currency, notes
+    `SELECT id, datetime, type, account_id, asset_symbol, quote_asset_symbol, quantity, price, fee_amount, fee_currency, notes
      FROM transactions
      WHERE asset_symbol = $1
+       AND user_id = $2
      ORDER BY datetime DESC, id DESC`,
-    [symbol]
+    [symbol, userId]
   );
 
   const portfolio = calculateAssetPortfolio(
@@ -84,7 +93,7 @@ export default async function AssetDetailPage({ params }: Props) {
                 <td className="table-cell">{formatNumber(Number(tx.quantity))}</td>
                 <td className="table-cell">{formatMoney(Number(tx.price))}</td>
                 <td className="table-cell">{formatMoney(Number(tx.fee_amount || 0))}</td>
-                <td className="table-cell text-slate-500">{tx.notes || "-"}</td>
+                <td className="table-cell text-slate-500">{decryptText(tx.notes) || "-"}</td>
               </tr>
             ))}
           </tbody>

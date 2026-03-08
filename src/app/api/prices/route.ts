@@ -7,6 +7,8 @@ export const dynamic = "force-dynamic";
 interface AssetIdRow {
   symbol: string;
   coingecko_id: string | null;
+  type?: string | null;
+  asset_class?: string | null;
 }
 
 export async function GET(request: Request) {
@@ -32,13 +34,17 @@ export async function GET(request: Request) {
 
   try {
     const { rows } = await pool.query<AssetIdRow>(
-      `SELECT symbol, coingecko_id
+      `SELECT symbol, coingecko_id, type, COALESCE(asset_class, type, 'crypto') AS asset_class
        FROM assets
        WHERE symbol = ANY($1::text[])`,
       [symbols]
     );
     for (const row of rows) {
       const symbol = String(row.symbol || "").toUpperCase();
+      const assetClass = row.asset_class || row.type || "crypto";
+      if (assetClass !== "crypto") {
+        continue;
+      }
       const id = String(row.coingecko_id || "").trim();
       if (symbol && id) {
         symbolToId[symbol] = id;
@@ -73,9 +79,9 @@ export async function GET(request: Request) {
     });
 
     if (!providerRes.ok) {
-      const body = await providerRes.text().catch(() => "");
+      console.error("[api/prices][GET] provider error", { status: providerRes.status });
       return NextResponse.json(
-        { error: "Provider error", details: body },
+        { error: "Provider error" },
         { status: 502, headers: { "Cache-Control": "no-store" } }
       );
     }
@@ -99,8 +105,9 @@ export async function GET(request: Request) {
       { headers: { "Cache-Control": "no-store" } }
     );
   } catch (error) {
+    console.error("[api/prices][GET] error", error);
     return NextResponse.json(
-      { error: "Failed to fetch live prices", details: String(error) },
+      { error: "Failed to fetch live prices" },
       { status: 500, headers: { "Cache-Control": "no-store" } }
     );
   }
