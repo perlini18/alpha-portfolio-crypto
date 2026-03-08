@@ -2,6 +2,10 @@ import { NextResponse } from "next/server";
 import { pool } from "@/lib/db";
 
 export async function POST() {
+  if (process.env.NODE_ENV !== "development") {
+    return NextResponse.json({ error: "Not available" }, { status: 403 });
+  }
+
   const client = await pool.connect();
 
   try {
@@ -62,8 +66,9 @@ export async function POST() {
     return NextResponse.json({ message: "Seed inserted" });
   } catch (error) {
     await client.query("ROLLBACK");
+    console.error("[api/seed][POST] error", error);
     return NextResponse.json(
-      { error: "Seed failed", details: String(error) },
+      { error: "Seed failed" },
       { status: 500 }
     );
   } finally {

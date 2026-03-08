@@ -1,141 +1,128 @@
+export const runtime = "nodejs";
 import { NextResponse } from "next/server";
 import { ZodError } from "zod";
 import { pool } from "@/lib/db";
+import { decryptText, encryptText } from "@/lib/crypto";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { createAccountSchema } from "@/lib/schemas";
+import { getClientIp } from "@/lib/security";
+import { requireUserId, UnauthorizedError } from "@/lib/requireUser";
 
 export const dynamic = "force-dynamic";
 
-interface AccountColumns {
-  kind: boolean;
-  notes: boolean;
-  isDefault: boolean;
-}
+export async function GET(request: Request) {
+  const ip = getClientIp(request);
+  let userId: string;
+  try {
+    userId = await requireUserId();
+  } catch (error) {
+    if (error instanceof UnauthorizedError) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    console.error("[api/accounts][GET] failed to resolve authenticated user", error);
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
 
-async function getAccountColumns(): Promise<AccountColumns> {
-  const { rows } = await pool.query(
-    `SELECT column_name
-     FROM information_schema.columns
-     WHERE table_schema = 'public'
-       AND table_name = 'accounts'
-       AND column_name IN ('kind', 'notes', 'is_default')`
-  );
+  const rl = checkRateLimit({ key: `accounts:get:${userId}:${ip}`, limit: 120, windowMs: 60_000 });
+  if (!rl.allowed) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
 
-  const names = new Set(rows.map((row) => row.column_name));
-  return {
-    kind: names.has("kind"),
-    notes: names.has("notes"),
-    isDefault: names.has("is_default")
-  };
-}
+  try {
+    const { rows } = await pool.query(
+      `SELECT id,
+              name,
+              CASE
+                WHEN kind IN ('exchange', 'fiat') THEN kind
+                WHEN kind = 'FIAT_CASH' THEN 'fiat'
+                ELSE 'exchange'
+              END AS kind,
+              base_currency,
+              notes,
+              COALESCE(is_default, false) AS is_default,
+              created_at
+       FROM accounts
+       WHERE user_id = $1
+       ORDER BY is_default DESC, name ASC`,
+      [userId]
+    );
 
-function buildAccountsSelect(columns: AccountColumns) {
-  const kindExpr = columns.kind
-    ? `CASE
-         WHEN kind IN ('exchange', 'fiat') THEN kind
-         WHEN kind = 'FIAT_CASH' THEN 'fiat'
-         ELSE 'exchange'
-       END AS kind`
-    : "'exchange'::text AS kind";
-  const notesExpr = columns.notes ? "notes" : "NULL::text AS notes";
-  const defaultExpr = columns.isDefault ? "is_default" : "false AS is_default";
-  const orderBy = columns.isDefault ? "ORDER BY is_default DESC, name ASC" : "ORDER BY name ASC";
-
-  return `SELECT id, name, ${kindExpr}, base_currency, ${notesExpr}, ${defaultExpr}, created_at
-          FROM accounts
-          ${orderBy}`;
-}
-
-export async function GET() {
-  const columns = await getAccountColumns();
-  const { rows } = await pool.query(buildAccountsSelect(columns));
-  return NextResponse.json(rows);
+    const safeRows = Array.isArray(rows)
+      ? rows.map((row) => ({
+          ...row,
+          notes: decryptText(row.notes)
+        }))
+      : [];
+    return NextResponse.json(safeRows);
+  } catch (error) {
+    console.error("[api/accounts][GET] database error", error);
+    return NextResponse.json({ error: "Failed to load accounts" }, { status: 500 });
+  }
 }
 
 export async function POST(request: Request) {
+  const ip = getClientIp(request);
+  let userId: string;
+  try {
+    userId = await requireUserId();
+  } catch (error) {
+    if (error instanceof UnauthorizedError) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+    console.error("[api/accounts][POST] failed to resolve authenticated user", error);
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
+  const rl = checkRateLimit({ key: `accounts:post:${userId}:${ip}`, limit: 30, windowMs: 60_000 });
+  if (!rl.allowed) {
+    return NextResponse.json({ error: "Too many requests" }, { status: 429 });
+  }
+
   const client = await pool.connect();
 
   try {
     const payload = await request.json();
     const parsed = createAccountSchema.parse(payload);
-    const columns = await getAccountColumns();
 
     await client.query("BEGIN");
 
-    if (parsed.is_default && columns.isDefault) {
-      await client.query("UPDATE accounts SET is_default = false WHERE is_default = true");
+    if (parsed.is_default) {
+      await client.query("UPDATE accounts SET is_default = false WHERE user_id = $1", [userId]);
     }
-
-    const insertCols = ["name", "base_currency"];
-    const values: Array<string | boolean | null> = [parsed.name, parsed.baseCurrency];
-
-    if (columns.kind) {
-      insertCols.push("kind");
-      values.push(parsed.kind);
-    }
-
-    if (columns.notes) {
-      insertCols.push("notes");
-      values.push(parsed.notes ?? null);
-    }
-
-    if (columns.isDefault) {
-      insertCols.push("is_default");
-      values.push(parsed.is_default);
-    }
-
-    const placeholders = insertCols.map((_, idx) => `$${idx + 1}`);
 
     const insertResult = await client.query(
-      `INSERT INTO accounts (${insertCols.join(", ")})
-       VALUES (${placeholders.join(", ")})
-       RETURNING id`,
-      values
-    );
-
-    const accountId = insertResult.rows[0]?.id;
-
-    const { rows } = await client.query(
-      `SELECT id,
-              name,
-              ${
-                columns.kind
-                  ? `CASE
-                       WHEN kind IN ('exchange', 'fiat') THEN kind
-                       WHEN kind = 'FIAT_CASH' THEN 'fiat'
-                       ELSE 'exchange'
-                     END AS kind`
-                  : "'exchange'::text AS kind"
-              },
-              base_currency,
-              ${columns.notes ? "notes" : "NULL::text AS notes"},
-              ${columns.isDefault ? "is_default" : "false AS is_default"},
-              created_at
-       FROM accounts
-       WHERE id = $1`,
-      [accountId]
+      `INSERT INTO accounts (user_id, name, kind, base_currency, notes, is_default)
+       VALUES ($1, $2, $3, $4, $5, $6)
+       RETURNING id, name, kind, base_currency, notes, is_default, created_at`,
+      [
+        userId,
+        parsed.name,
+        parsed.kind,
+        parsed.baseCurrency,
+        encryptText(parsed.notes ?? null),
+        parsed.is_default
+      ]
     );
 
     await client.query("COMMIT");
-    return NextResponse.json(rows[0], { status: 201 });
+    return NextResponse.json(
+      { ...insertResult.rows[0], notes: decryptText(insertResult.rows[0]?.notes) },
+      { status: 201 }
+    );
   } catch (error) {
     await client.query("ROLLBACK");
 
     if (error instanceof ZodError) {
-      const hasKindError = error.issues.some((issue) => issue.path.includes("kind"));
-      if (hasKindError) {
-        return NextResponse.json(
-          {
-            error: "Invalid account kind. Allowed values: exchange, fiat"
-          },
-          { status: 400 }
-        );
-      }
+      return NextResponse.json(
+        {
+          error: "Invalid account payload"
+        },
+        { status: 400 }
+      );
     }
 
-    return NextResponse.json(
-      { error: "Invalid account payload", details: String(error) },
-      { status: 400 }
-    );
+    console.error("[api/accounts][POST] database error", error);
+    return NextResponse.json({ error: "Failed to create account" }, { status: 500 });
   } finally {
     client.release();
   }

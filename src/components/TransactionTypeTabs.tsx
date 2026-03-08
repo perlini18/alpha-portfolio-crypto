@@ -32,7 +32,9 @@ export function TransactionTypeTabs({ value, onChange }: TransactionTypeTabsProp
               tab.disabled
                 ? "cursor-not-allowed border border-slate-200 bg-white text-slate-400"
                 : active
-                  ? "bg-slate-900 text-white shadow-sm"
+                  ? tab.key === "SELL"
+                    ? "bg-rose-600 text-white shadow-sm"
+                    : "bg-slate-900 text-white shadow-sm"
                   : "border border-slate-200 bg-white text-slate-700 hover:bg-slate-50"
             }`}
           >

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { z } from "zod";
 
 export const dynamic = "force-dynamic";
 
@@ -9,20 +10,25 @@ interface CoinGeckoCoin {
   thumb?: string;
 }
 
+const querySchema = z.object({
+  q: z.string().trim().min(2).max(64),
+  type: z.enum(["crypto"]).default("crypto"),
+  limit: z.coerce.number().int().min(1).max(50).default(10)
+});
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const q = (searchParams.get("q") || "").trim();
-  const type = (searchParams.get("type") || "crypto").trim().toLowerCase();
-  const limitRaw = Number(searchParams.get("limit") || 10);
-  const limit = Number.isFinite(limitRaw) ? Math.max(1, Math.min(50, Math.floor(limitRaw))) : 10;
-
-  if (q.length < 2) {
+  const parsed = querySchema.safeParse({
+    q: searchParams.get("q") || "",
+    type: (searchParams.get("type") || "crypto").trim().toLowerCase(),
+    limit: searchParams.get("limit") || "10"
+  });
+  if (!parsed.success) {
     return NextResponse.json([]);
   }
+  const { q, type, limit } = parsed.data;
 
-  if (type !== "crypto") {
-    return NextResponse.json([]);
-  }
+  if (type !== "crypto") return NextResponse.json([]);
 
   try {
     const url = `https://api.coingecko.com/api/v3/search?query=${encodeURIComponent(q)}`;
@@ -56,6 +62,7 @@ export async function GET(request: Request) {
 
     return NextResponse.json(items);
   } catch (error) {
+    console.error("[api/instruments/search][GET] provider unavailable");
     return NextResponse.json({
       warning: "provider_unavailable",
       items: []

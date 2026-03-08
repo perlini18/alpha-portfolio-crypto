@@ -1,6 +1,6 @@
 :root {
   --brand-500: #4f55f1;
-  --brand-400: #7f84f6;
+  --brand-400: #6970ff;
   --ink-900: #191c1f;
   --ink-inverse: #f8fafc;
   --bg-50: #f6f8fc;
@@ -10,20 +10,24 @@
   --success: #16a34a;
   --danger: #ef4444;
   --card-shadow: 0 8px 30px rgba(15, 23, 42, 0.06);
+  --surface-2: #f1f4fb;
+  --focus-ring: rgba(79, 85, 241, 0.2);
 }
 
 html.dark {
-  --brand-500: #7f84f6;
-  --brand-400: #9aa0fa;
-  --ink-900: #e6ebf5;
-  --ink-inverse: #0f172a;
-  --bg-50: #0f1420;
-  --card: #161d2d;
-  --border: #253047;
-  --muted: #9aa4b2;
-  --success: #22c55e;
-  --danger: #f87171;
-  --card-shadow: 0 10px 30px rgba(2, 6, 23, 0.5);
+  --brand-500: #6f78ff;
+  --brand-400: #8690ff;
+  --ink-900: #edf2ff;
+  --ink-inverse: #07090f;
+  --bg-50: #090c13;
+  --card: #101623;
+  --surface-2: #131b2b;
+  --border: #232c3d;
+  --muted: #99a4ba;
+  --success: #2bd67b;
+  --danger: #ff6d82;
+  --focus-ring: rgba(111, 120, 255, 0.28);
+  --card-shadow: 0 18px 50px rgba(2, 6, 23, 0.45);
 }
 
 .bg-app {
@@ -33,9 +37,9 @@ html.dark {
 .card {
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 24px;
+  border-radius: 26px;
   box-shadow: var(--card-shadow);
-  padding: 1.25rem;
+  padding: 1.4rem;
 }
 
 .pill-success {
@@ -85,7 +89,7 @@ html.dark {
 }
 
 .btn-secondary:hover {
-  background: var(--bg-50);
+  background: var(--surface-2);
 }
 
 .input-ui {
@@ -99,6 +103,6 @@ html.dark {
 }
 
 .input-ui:focus {
-  box-shadow: 0 0 0 3px rgba(79, 85, 241, 0.2);
+  box-shadow: 0 0 0 3px var(--focus-ring);
   border-color: var(--brand-400);
 }

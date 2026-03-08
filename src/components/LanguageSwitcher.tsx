@@ -3,8 +3,7 @@
 import { useLanguage } from "@/components/LanguageProvider";
 import { t, type LangMode } from "@/lib/i18n";
 
-const options: Array<{ mode: LangMode; labelKey: "lang.system" | "lang.es" | "lang.en" }> = [
-  { mode: "system", labelKey: "lang.system" },
+const options: Array<{ mode: LangMode; labelKey: "lang.es" | "lang.en" }> = [
   { mode: "es", labelKey: "lang.es" },
   { mode: "en", labelKey: "lang.en" }
 ];

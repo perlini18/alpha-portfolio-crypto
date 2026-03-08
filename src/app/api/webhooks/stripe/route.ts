@@ -41,7 +41,8 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
     }
   } catch (error) {
-    return NextResponse.json({ error: "Webhook configuration error", details: String(error) }, { status: 500 });
+    console.error("[api/webhooks/stripe][POST] configuration error", error);
+    return NextResponse.json({ error: "Webhook configuration error" }, { status: 500 });
   }
 
   let event: Record<string, unknown>;
@@ -120,6 +121,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ received: true });
   } catch (error) {
-    return NextResponse.json({ error: "Webhook processing failed", details: String(error) }, { status: 500 });
+    console.error("[api/webhooks/stripe][POST] processing error", error);
+    return NextResponse.json({ error: "Webhook processing failed" }, { status: 500 });
   }
 }

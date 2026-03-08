@@ -116,6 +116,15 @@ function formatAsOfAgo(value: string | null) {
   return `Updated ${mins}m ago`;
 }
 
+const CASH_LIKE_SYMBOLS = new Set(["USD", "USDT", "USDC", "FDUSD", "BUSD", "DAI", "TUSD", "USDP"]);
+
+function fallbackUsdPrice(symbol: string, price: number | null | undefined) {
+  if (Number.isFinite(price) && Number(price) > 0) {
+    return Number(price);
+  }
+  return CASH_LIKE_SYMBOLS.has(String(symbol || "").toUpperCase()) ? 1 : null;
+}
+
 function AccountModal({ open, loading, initialAccount, onClose, onSubmit }: AccountModalProps) {
   const { lang } = useLanguage();
   const isEdit = Boolean(initialAccount);
@@ -347,19 +356,19 @@ export function AccountsManager() {
         body: JSON.stringify(
           editing
             ? {
-                name: payload.name,
-                kind: payload.kind,
-                baseCurrency: payload.base_currency,
-                notes: payload.notes || null,
-                is_default: payload.is_default
-              }
+              name: payload.name,
+              kind: payload.kind,
+              baseCurrency: payload.base_currency,
+              notes: payload.notes || null,
+              is_default: payload.is_default
+            }
             : {
-                name: payload.name,
-                kind: payload.kind,
-                baseCurrency: payload.base_currency,
-                notes: payload.notes || null,
-                ...(payload.is_default ? { is_default: true } : {})
-              }
+              name: payload.name,
+              kind: payload.kind,
+              baseCurrency: payload.base_currency,
+              notes: payload.notes || null,
+              ...(payload.is_default ? { is_default: true } : {})
+            }
         )
       });
 
@@ -467,7 +476,8 @@ export function AccountsManager() {
       const holdings = baseHoldings
         .map((holding) => {
           const symbol = String(holding.symbol || "").toUpperCase();
-          const marketPrice = pricesMap[symbol];
+          const marketPriceResolved = fallbackUsdPrice(symbol, pricesMap[symbol] ?? holding.lastPriceUsd);
+          const marketPrice = marketPriceResolved ?? 0;
           const hasMarketPrice = Number.isFinite(marketPrice) && marketPrice > 0;
           const worthLive = hasMarketPrice ? Number(holding.qty || 0) * marketPrice : null;
           const pnl = worthLive == null ? null : worthLive - Number(holding.cost || 0);
@@ -520,7 +530,7 @@ export function AccountsManager() {
   }
 
   return (
-    <section className="mx-auto max-w-6xl space-y-5 md:space-y-6">
+    <section className="mx-auto max-w-6xl space-y-6 md:space-y-8">
       <Toast message={toastMessage} visible={toastVisible} />
 
       <div className="card space-y-4">
@@ -572,7 +582,7 @@ export function AccountsManager() {
                 <th className="px-4 py-3">{t("accounts.type", lang)}</th>
                 <th className="px-4 py-3">{t("accounts.baseCurrency", lang)}</th>
                 <th className="px-4 py-3">Cost (Avg)</th>
-                <th className="px-4 py-3">Worth (Live)</th>
+                <th className="px-4 py-3">Worth</th>
                 <th className="px-4 py-3">PnL</th>
                 <th className="px-4 py-3">{t("accounts.holdings", lang)}</th>
                 <th className="px-4 py-3">{t("accounts.default", lang)}</th>
@@ -590,9 +600,8 @@ export function AccountsManager() {
                 return (
                   <Fragment key={account.id}>
                     <tr
-                      className={`h-16 border-b border-[color:var(--border)] hover:bg-[color:var(--bg-50)] ${
-                        account.is_default ? "bg-[color:rgba(79,85,241,0.06)]" : ""
-                      }`}
+                      className={`h-16 border-b border-[color:var(--border)] hover:bg-[color:var(--bg-50)] ${account.is_default ? "bg-[color:rgba(79,85,241,0.06)]" : ""
+                        }`}
                     >
                       <td className="px-4 py-3">
                         <div className="text-sm font-semibold text-[color:var(--ink-900)]">{account.name}</div>
@@ -658,13 +667,13 @@ export function AccountsManager() {
                           <button
                             type="button"
                             onClick={() => setOpenMenuId((prev) => (prev === account.id ? null : account.id))}
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[color:var(--muted)] hover:border hover:border-[color:var(--border)] hover:bg-white"
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[color:var(--muted)] hover:border hover:border-[color:var(--border)] hover:bg-[color:var(--card)]"
                             aria-label={`Open actions for ${account.name}`}
                           >
                             ⋯
                           </button>
                           {openMenuId === account.id ? (
-                            <div className="absolute right-0 z-20 mt-1 w-32 rounded-xl border border-[color:var(--border)] bg-white p-1 shadow-lg">
+                            <div className="absolute right-0 z-20 mt-1 w-32 rounded-xl border border-[color:var(--border)] bg-[color:var(--card)] p-1 shadow-lg">
                               <button
                                 type="button"
                                 onClick={() => {
@@ -696,7 +705,7 @@ export function AccountsManager() {
                         <button
                           type="button"
                           onClick={() => toggleExpand(account.id)}
-                          className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[color:var(--muted)] hover:border hover:border-[color:var(--border)] hover:bg-white"
+                          className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[color:var(--muted)] hover:border hover:border-[color:var(--border)] hover:bg-[color:var(--card)]"
                           aria-label={`${expanded ? "Collapse" : "Expand"} holdings for ${account.name}`}
                         >
                           {expanded ? "⌃" : "⌄"}
@@ -725,7 +734,7 @@ export function AccountsManager() {
                                     <th className="px-3 py-2">Avg Cost</th>
                                     <th className="px-3 py-2">Cost</th>
                                     <th className="px-3 py-2">{t("accounts.lastPrice", lang)}</th>
-                                    <th className="px-3 py-2">Worth (Live)</th>
+                                    <th className="px-3 py-2">Worth</th>
                                     <th className="px-3 py-2">PnL</th>
                                   </tr>
                                 </thead>
@@ -779,9 +788,8 @@ export function AccountsManager() {
           {accounts.map((account) => (
             <article
               key={`mobile-${account.id}`}
-              className={`rounded-2xl border border-[color:var(--border)] bg-white p-4 ${
-                account.is_default ? "bg-[color:rgba(79,85,241,0.06)]" : ""
-              }`}
+              className={`rounded-2xl border border-[color:var(--border)] bg-[color:var(--card)] p-4 ${account.is_default ? "bg-[color:rgba(79,85,241,0.08)]" : ""
+                }`}
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
@@ -797,13 +805,13 @@ export function AccountsManager() {
                   <button
                     type="button"
                     onClick={() => setOpenMenuId((prev) => (prev === account.id ? null : account.id))}
-                    className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[color:var(--muted)] hover:border hover:border-[color:var(--border)] hover:bg-white"
+                    className="inline-flex h-8 w-8 items-center justify-center rounded-full text-[color:var(--muted)] hover:border hover:border-[color:var(--border)] hover:bg-[color:var(--card)]"
                     aria-label={`Open actions for ${account.name}`}
                   >
                     ⋯
                   </button>
                   {openMenuId === account.id ? (
-                    <div className="absolute right-0 z-20 mt-1 w-32 rounded-xl border border-[color:var(--border)] bg-white p-1 shadow-lg">
+                    <div className="absolute right-0 z-20 mt-1 w-32 rounded-xl border border-[color:var(--border)] bg-[color:var(--card)] p-1 shadow-lg">
                       <button
                         type="button"
                         onClick={() => {
@@ -862,7 +870,7 @@ export function AccountsManager() {
                 Cost (Avg): <span className="font-semibold">{summaryLoading ? "..." : formatMoney(Number(computedSummaryByAccountId[account.id]?.costTotal || 0))}</span>
               </div>
               <div className="mt-1 text-xs text-[color:var(--muted)]">
-                Worth (Live):{" "}
+                Worth:{" "}
                 <span className="font-semibold text-[color:var(--ink-900)]">
                   {summaryLoading
                     ? "..."
@@ -877,11 +885,10 @@ export function AccountsManager() {
                   ? "..."
                   : computedSummaryByAccountId[account.id]?.pnlTotal == null
                     ? "—"
-                    : `${formatMoney(Number(computedSummaryByAccountId[account.id]?.pnlTotal || 0))} ${
-                        computedSummaryByAccountId[account.id]?.pnlPctTotal == null
-                          ? "(—)"
-                          : `(${computedSummaryByAccountId[account.id]!.pnlPctTotal! > 0 ? "+" : ""}${computedSummaryByAccountId[account.id]!.pnlPctTotal!.toFixed(2)}%)`
-                      }`}
+                    : `${formatMoney(Number(computedSummaryByAccountId[account.id]?.pnlTotal || 0))} ${computedSummaryByAccountId[account.id]?.pnlPctTotal == null
+                      ? "(—)"
+                      : `(${computedSummaryByAccountId[account.id]!.pnlPctTotal! > 0 ? "+" : ""}${computedSummaryByAccountId[account.id]!.pnlPctTotal!.toFixed(2)}%)`
+                    }`}
               </div>
               <div className="mt-1 text-xs text-[color:var(--muted)]">
                 {t("accounts.holdings", lang)}: {summaryLoading ? "..." : t("accounts.assetsCount", lang).replace("{n}", String(Number(computedSummaryByAccountId[account.id]?.holdingsCount || 0)))}

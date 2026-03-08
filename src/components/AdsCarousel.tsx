@@ -454,6 +454,7 @@ export function AdsCarousel({ page, limit = 10 }: AdsCarouselProps) {
                       >
                         {ad.cta}
                       </button>
+                      <p className="mt-1 text-[10px] uppercase tracking-wide text-[color:var(--muted)]">{t("ads.externalLink", lang)}</p>
                     </div>
                     {ad.image_url ? (
                       <img src={ad.image_url} alt="" className="h-20 w-20 rounded-2xl object-cover" loading="lazy" />

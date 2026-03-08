@@ -75,7 +75,6 @@ function parseAdsFromEnv(lang: Lang) {
     });
   }
 
-  console.log(`[api/ads] loaded ${ads.length} ads from env`);
   if (ads.length === 0) {
     console.warn(
       "[api/ads] 0 ads loaded. Expected env keys like NEXT_PUBLIC_AD_1_TITLE and NEXT_PUBLIC_AD_1_URL"

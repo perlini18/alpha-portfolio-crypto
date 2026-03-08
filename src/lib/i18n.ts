@@ -13,14 +13,20 @@ export const dict = {
     "nav.portfolio": "Portfolio",
     "nav.accounts": "Accounts",
     "nav.transactions": "Transactions",
+    "nav.crypto": "Crypto",
+    "nav.stocks": "Stocks",
 
     "theme.light": "Light",
     "theme.dark": "Dark",
     "theme.system": "System",
 
     "dashboard.title": "Dashboard",
+    "dashboard.cryptoOverview": "Crypto portfolio overview",
     "dashboard.totalWorth": "Total Worth",
+    "dashboard.totalWorthUsd": "Total Worth (USD)",
     "dashboard.totalPnl": "Total PnL",
+    "dashboard.totalPnlUsd": "Total PnL (USD)",
+    "dashboard.valuesInUsd": "All values shown in USD",
     "dashboard.holdings": "Holdings",
     "dashboard.searchPlaceholder": "Search symbol or name",
     "dashboard.showZero": "Show zero holdings",
@@ -33,6 +39,12 @@ export const dict = {
 
     "portfolio.title": "Portfolio",
     "portfolio.subtitle": "Track your holdings and performance across accounts",
+    "portfolio.tabCrypto": "Crypto",
+    "portfolio.tabStocks": "Stocks",
+    "portfolio.comingSoon": "Coming soon",
+    "portfolio.stocksComingSoonTitle": "Stocks coming soon",
+    "portfolio.stocksComingSoonDescription": "Stock tracking will be available in a future release.",
+    "portfolio.stayTuned": "Stay tuned",
     "portfolio.totalValue": "Total Value",
     "portfolio.totalPnl": "Total PnL",
     "portfolio.accounts": "Accounts",
@@ -124,6 +136,13 @@ export const dict = {
     "transactions.cancel": "Cancel",
     "transactions.delete": "Delete",
     "transactions.deleting": "Deleting...",
+    "transaction.receiveIn": "Receive in",
+    "transaction.quoteAsset": "Quote asset",
+    "transaction.youSell": "You sell",
+    "transaction.youReceive": "You receive",
+    "transaction.youSpend": "You spend",
+    "transaction.netProceeds": "Net proceeds",
+    "transaction.grossAmount": "Gross amount",
 
     "txModal.createTitle": "Create transaction",
     "txModal.editTitle": "Edit transaction",
@@ -181,7 +200,8 @@ export const dict = {
     "ads.notNow": "Not now",
     "ads.redirecting": "Redirecting...",
     "ads.checkoutCanceled": "Checkout canceled. Ads remain active.",
-    "ads.subscriptionActive": "Subscription active. Ads removed."
+    "ads.subscriptionActive": "Subscription active. Ads removed.",
+    "ads.externalLink": "External link"
   },
   es: {
     "lang.system": "Sistema",
@@ -192,14 +212,20 @@ export const dict = {
     "nav.portfolio": "Portafolio",
     "nav.accounts": "Cuentas",
     "nav.transactions": "Transacciones",
+    "nav.crypto": "Crypto",
+    "nav.stocks": "Acciones",
 
     "theme.light": "Claro",
     "theme.dark": "Oscuro",
     "theme.system": "Sistema",
 
     "dashboard.title": "Dashboard",
+    "dashboard.cryptoOverview": "Resumen del portafolio crypto",
     "dashboard.totalWorth": "Valor Total",
+    "dashboard.totalWorthUsd": "Valor Total (USD)",
     "dashboard.totalPnl": "PnL Total",
+    "dashboard.totalPnlUsd": "PnL Total (USD)",
+    "dashboard.valuesInUsd": "Todos los valores se muestran en USD",
     "dashboard.holdings": "Holdings",
     "dashboard.searchPlaceholder": "Buscar símbolo o nombre",
     "dashboard.showZero": "Mostrar holdings en cero",
@@ -212,6 +238,12 @@ export const dict = {
 
     "portfolio.title": "Portafolio",
     "portfolio.subtitle": "Monitorea tus holdings y rendimiento por cuenta",
+    "portfolio.tabCrypto": "Crypto",
+    "portfolio.tabStocks": "Acciones",
+    "portfolio.comingSoon": "Próximamente",
+    "portfolio.stocksComingSoonTitle": "Acciones próximamente",
+    "portfolio.stocksComingSoonDescription": "El seguimiento de acciones estará disponible en una futura versión.",
+    "portfolio.stayTuned": "Mantente al tanto",
     "portfolio.totalValue": "Valor Total",
     "portfolio.totalPnl": "PnL Total",
     "portfolio.accounts": "Cuentas",
@@ -303,6 +335,13 @@ export const dict = {
     "transactions.cancel": "Cancelar",
     "transactions.delete": "Eliminar",
     "transactions.deleting": "Eliminando...",
+    "transaction.receiveIn": "Recibes en",
+    "transaction.quoteAsset": "Activo de liquidación",
+    "transaction.youSell": "Tú vendes",
+    "transaction.youReceive": "Tú recibes",
+    "transaction.youSpend": "Tú gastas",
+    "transaction.netProceeds": "Proceeds netos",
+    "transaction.grossAmount": "Cantidad bruta",
 
     "txModal.createTitle": "Crear transacción",
     "txModal.editTitle": "Editar transacción",
@@ -360,7 +399,8 @@ export const dict = {
     "ads.notNow": "Ahora no",
     "ads.redirecting": "Redirigiendo...",
     "ads.checkoutCanceled": "Checkout cancelado. Los anuncios siguen activos.",
-    "ads.subscriptionActive": "Suscripción activa. Anuncios eliminados."
+    "ads.subscriptionActive": "Suscripción activa. Anuncios eliminados.",
+    "ads.externalLink": "Enlace externo"
   }
 } as const;
 

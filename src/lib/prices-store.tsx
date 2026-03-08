@@ -27,7 +27,7 @@ export function PricesProvider({ children }: { children: React.ReactNode }) {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const inFlightRef = useRef<Promise<void> | null>(null);
 
-  const fetchPrices = useCallback(async () => {
+  const fetchPrices = useCallback(async (force = false) => {
     if (inFlightRef.current) {
       return inFlightRef.current;
     }
@@ -35,7 +35,8 @@ export function PricesProvider({ children }: { children: React.ReactNode }) {
     const run = (async () => {
       setStatus((current) => (current === "ready" ? "ready" : "loading"));
       try {
-        const res = await fetch("/api/prices/map", { cache: "no-store", credentials: "include" });
+        const suffix = force ? "?force=1" : "";
+        const res = await fetch(`/api/prices/map${suffix}`, { cache: "no-store", credentials: "include" });
         if (!res.ok) {
           throw new Error("prices_map_failed");
         }
@@ -65,7 +66,7 @@ export function PricesProvider({ children }: { children: React.ReactNode }) {
     if (status === "ready") {
       return;
     }
-    await fetchPrices();
+    await fetchPrices(false);
   }, [fetchPrices, status]);
 
   const refresh = useCallback(
@@ -75,7 +76,7 @@ export function PricesProvider({ children }: { children: React.ReactNode }) {
       if (!force && lastTs && now - lastTs < COOLDOWN_MS) {
         return;
       }
-      await fetchPrices();
+      await fetchPrices(force);
     },
     [fetchPrices, lastUpdated]
   );
